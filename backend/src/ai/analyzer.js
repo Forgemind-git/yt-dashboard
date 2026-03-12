@@ -11,7 +11,14 @@ const GATHER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for channel data gather
 // ============================================================================
 // DATA GATHERER — collects all channel metrics into a structured snapshot
 // ============================================================================
+let channelDataCache = null;
+let channelDataCacheTime = 0;
+const CHANNEL_CACHE_TTL = 5 * 60 * 1000;
+
 async function gatherChannelData() {
+  if (channelDataCache && Date.now() - channelDataCacheTime < CHANNEL_CACHE_TTL) {
+    return channelDataCache;
+  }
   const cached = cache.get('__gather__');
   if (cached && Date.now() - cached.timestamp < GATHER_CACHE_TTL) {
     return cached.data;

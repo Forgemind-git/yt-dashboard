@@ -2,15 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../api/client';
 import { useDateRange } from '../context/DateRangeContext';
 
-export function useTopVideos() {
-  const { from, to } = useDateRange();
-  return useQuery({
-    queryKey: ['top-videos', from, to],
-    queryFn: () => apiFetch(`/videos/top?from=${from}&to=${to}`),
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
 export function useVideoList(page = 1, limit = 20, sort = 'views') {
   const { from, to } = useDateRange();
   return useQuery({
