@@ -31,7 +31,7 @@ router.get('/auth/callback', async (req, res) => {
     res.redirect('/');
   } catch (err) {
     console.error('Auth callback error:', err.message);
-    res.status(500).send(`Authentication failed: ${err.message}. <a href="/api/auth/init">Try again</a>`);
+    res.status(500).send('Authentication failed. <a href="/api/auth/init">Try again</a>');
   }
 });
 

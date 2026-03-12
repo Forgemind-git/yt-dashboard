@@ -77,10 +77,11 @@ export default function Layout() {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              aria-current={({ isActive }) => isActive ? 'page' : undefined}
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? 'text-white bg-accent/15 text-accent'
+                    ? 'bg-accent/15 text-accent'
                     : 'text-gray-500 hover:text-gray-300 hover:bg-surface-3'
                 }`
               }

@@ -72,6 +72,10 @@ export default function Videos() {
                 <tr
                   key={v.video_id}
                   onClick={() => setSelectedVideo(selectedVideo === v.video_id ? null : v.video_id)}
+                  tabIndex={0}
+                  role="button"
+                  aria-pressed={selectedVideo === v.video_id}
+                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSelectedVideo(selectedVideo === v.video_id ? null : v.video_id)}
                   className={`border-b border-border cursor-pointer transition-colors duration-150
                     ${selectedVideo === v.video_id
                       ? 'bg-accent/5'

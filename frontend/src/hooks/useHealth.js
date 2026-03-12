@@ -5,7 +5,7 @@ export function useCollectionLogs() {
   return useQuery({
     queryKey: ['collection-logs'],
     queryFn: () => apiFetch('/collection/logs'),
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
   });
 }
