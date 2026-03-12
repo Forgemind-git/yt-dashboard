@@ -101,6 +101,50 @@ DateRangePicker buttons use "7 days", "28 days", "90 days", "1 year" — NOT "7d
 ### 10. AI Strategy page is at `/ai`, not `/ai-insights`
 The route is `<Route path="ai" element={<AiInsights />} />`. The URL is `https://yt.srv879786.hstgr.cloud/ai`.
 
+### 11. Traefik v3 requires `traefik.docker.network` label and `websecure` only
+Without `traefik.docker.network=root_default`, Traefik v3 silently ignores the container — no error logged, just absent from router list. Also `entrypoints=web,websecure` breaks v3; use `entrypoints=websecure` only.
+```yaml
+- "traefik.docker.network=root_default"
+- "traefik.http.routers.yt-backend.entrypoints=websecure"
+```
+
+### 12. Healthcheck `localhost` resolves to IPv6 in Node alpine containers
+`wget http://localhost:3001/health` fails with "Connection refused" because `localhost` → `::1` (IPv6) but Node listens on `0.0.0.0` (IPv4). Always use `127.0.0.1`:
+```yaml
+test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
+```
+
+### 13. AreaChartCard Y-axis must start from 0 with p95 cap
+`domain={['auto','auto']}` causes Recharts to auto-scale from the data minimum — quiet days compress to a flat line and outlier spikes shoot off the top making charts unreadable. Always use:
+```jsx
+domain={[0, Math.ceil(p95 * 1.2)]}
+```
+The `computeYDomain` function in `AreaChartCard.jsx` handles this. Never change it back to `['auto','auto']`.
+
+### 14. Timeseries API returns views/watch_time as strings, not numbers
+`/api/channel/timeseries` returns `{ views: '371', watch_time: '889' }` — strings, not numbers. Always cast with `Number()` or `parseInt()` before arithmetic or chart domain calculations.
+
+### 15. ALWAYS take a screenshot to verify UI fixes
+Do not assume a chart or UI fix is correct just because tests pass. Use Playwright to take a screenshot and visually confirm. The user will be frustrated if you claim something is fixed without actually looking at it:
+```bash
+cd /root/Yt-dashboard/tests && node -e "
+const { chromium } = require('@playwright/test');
+(async () => {
+  const b = await chromium.launch({ headless: true });
+  const p = await b.newPage();
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await p.goto('https://yt.srv879786.hstgr.cloud/');
+  await p.waitForLoadState('networkidle');
+  await p.waitForTimeout(3000);
+  await p.screenshot({ path: '/tmp/screenshot.png' });
+  await b.close();
+})();
+"
+```
+
+### 16. User preference: verify against real API data, not just visually
+After any chart fix, curl the underlying API endpoint and confirm the data matches what the chart shows. Don't skip this step.
+
 ## Architecture
 
 ### Network Topology
