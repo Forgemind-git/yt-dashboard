@@ -1,4 +1,3 @@
-const dayjs = require('dayjs');
 const pool = require('../db/pool');
 const { getYouTubeAnalytics } = require('../auth/youtube');
 
@@ -7,29 +6,31 @@ async function collectDemographics(startDate, endDate) {
 
   const { data } = await analytics.reports.query({
     ids: 'channel==MINE',
-    startDate: dayjs(startDate).format('YYYY-MM-DD'),
-    endDate: dayjs(endDate).format('YYYY-MM-DD'),
+    startDate,
+    endDate,
     metrics: 'viewerPercentage',
     dimensions: 'ageGroup,gender',
     sort: 'ageGroup',
   });
 
-  const snapshotDate = dayjs(endDate).format('YYYY-MM-DD');
-  let rowsAffected = 0;
+  const rows = data.rows || [];
+  if (!rows.length) return 0;
 
-  for (const row of data.rows || []) {
+  const values = rows.map((row, i) => {
     const [ageGroup, gender, viewerPercentage] = row;
-    await pool.query(
-      `INSERT INTO audience_demographics (snapshot_date, age_group, gender, viewer_percentage)
-       VALUES ($1,$2,$3,$4)
-       ON CONFLICT (snapshot_date, age_group, gender) DO UPDATE SET
-         viewer_percentage=EXCLUDED.viewer_percentage`,
-      [snapshotDate, ageGroup, gender, viewerPercentage]
-    );
-    rowsAffected++;
-  }
+    const base = i * 4;
+    return { vals: [endDate, ageGroup, gender, viewerPercentage], placeholders: `($${base+1},$${base+2},$${base+3},$${base+4})` };
+  });
 
-  return rowsAffected;
+  await pool.query(
+    `INSERT INTO audience_demographics (snapshot_date, age_group, gender, viewer_percentage)
+     VALUES ${values.map(v => v.placeholders).join(',')}
+     ON CONFLICT (snapshot_date, age_group, gender) DO UPDATE SET
+       viewer_percentage=EXCLUDED.viewer_percentage`,
+    values.flatMap(v => v.vals)
+  );
+
+  return rows.length;
 }
 
 module.exports = collectDemographics;

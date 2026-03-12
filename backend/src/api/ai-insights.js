@@ -24,7 +24,28 @@ router.post('/ai-insights/chat', async (req, res) => {
   try {
     const { question, history } = req.body || {};
     if (!question) return res.status(400).json({ error: 'Question is required' });
-    const result = await chatWithData(question, history || []);
+    if (typeof question !== 'string' || question.length > 2000) {
+      return res.status(400).json({ error: 'Question must be a string under 2000 characters' });
+    }
+
+    // Validate history: must be array, max 20 items, each with valid role and string content
+    const VALID_ROLES = new Set(['user', 'assistant', 'system']);
+    const safeHistory = [];
+    if (Array.isArray(history)) {
+      for (const msg of history.slice(0, 20)) {
+        if (
+          msg &&
+          typeof msg === 'object' &&
+          VALID_ROLES.has(msg.role) &&
+          typeof msg.content === 'string' &&
+          msg.content.length <= 4000
+        ) {
+          safeHistory.push({ role: msg.role, content: msg.content });
+        }
+      }
+    }
+
+    const result = await chatWithData(question, safeHistory);
     res.json(result);
   } catch (err) {
     console.error('AI chat error:', err.message);

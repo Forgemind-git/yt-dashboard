@@ -6,11 +6,17 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // In-memory cache: analysis type → { data, timestamp }
 const cache = new Map();
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+const GATHER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for channel data gather
 
 // ============================================================================
 // DATA GATHERER — collects all channel metrics into a structured snapshot
 // ============================================================================
 async function gatherChannelData() {
+  const cached = cache.get('__gather__');
+  if (cached && Date.now() - cached.timestamp < GATHER_CACHE_TTL) {
+    return cached.data;
+  }
+
   const [
     channelRes,
     videoRes,
@@ -39,7 +45,13 @@ async function gatherChannelData() {
       WHERE snapshot_date >= CURRENT_DATE - INTERVAL '30 days'
       GROUP BY source_type ORDER BY views DESC
     `),
-    pool.query(`SELECT country_code, views FROM geography_stats ORDER BY views DESC LIMIT 20`),
+    pool.query(`
+      SELECT country_code, SUM(views) AS views
+      FROM geography_stats
+      WHERE snapshot_date >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY country_code
+      ORDER BY views DESC LIMIT 20
+    `),
     pool.query(`
       SELECT device_type, SUM(views) AS views
       FROM device_stats
@@ -102,7 +114,7 @@ async function gatherChannelData() {
     uploadGaps.push(Math.round((publishDates[i] - publishDates[i + 1]) / (1000 * 60 * 60 * 24)));
   }
 
-  return {
+  const result = {
     channelName: 'Forgemind AI',
     niche: 'AI tutorials, automation tools (N8N, Make), tech tutorials in English and Tamil',
     totalSubscribers: parseInt(latest.total_subscribers) || 0,
@@ -129,6 +141,9 @@ async function gatherChannelData() {
       watchTime: parseInt(r.estimated_minutes_watched) || 0,
     })),
   };
+
+  cache.set('__gather__', { data: result, timestamp: Date.now() });
+  return result;
 }
 
 // ============================================================================

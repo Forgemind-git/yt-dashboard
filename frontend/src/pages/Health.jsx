@@ -11,13 +11,6 @@ export default function Health() {
   const { data: logs, isLoading } = useCollectionLogs();
   const triggerMutation = useTriggerCollection();
 
-  // Group logs by run_id
-  const runs = {};
-  for (const log of logs || []) {
-    if (!runs[log.run_id]) runs[log.run_id] = [];
-    runs[log.run_id].push(log);
-  }
-
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">

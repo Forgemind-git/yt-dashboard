@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import {
   useAiAnalysis, useAiAnalysisTypes, useRefreshAnalysis,
   useSmartNotifications, useAiChat, useGenerateTitles, useGenerateAllAnalyses,
@@ -61,10 +62,14 @@ function renderMarkdown(text) {
     }
   };
 
-  const fmt = (s) => s
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-gray-200 font-semibold">$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em class="text-gray-300">$1</em>')
-    .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 bg-surface-4 rounded text-[11px] text-accent font-mono">$1</code>');
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const fmt = (s) => DOMPurify.sanitize(
+    esc(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong class="text-gray-200 font-semibold">$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em class="text-gray-300">$1</em>')
+      .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 bg-surface-4 rounded text-[11px] text-accent font-mono">$1</code>'),
+    { ALLOWED_TAGS: ['strong', 'em', 'code'], ALLOWED_ATTR: ['class'] }
+  );
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();

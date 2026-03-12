@@ -28,7 +28,7 @@ async function collectRealtimeStats() {
 
   const result = await pool.query(
     `INSERT INTO realtime_stats (concurrent_viewers, views_last_60_min, views_last_48_hours)
-     VALUES ($1, $2, $3) RETURNING id`,
+     VALUES ($1, $2, $3)`,
     [0, viewsToday, totalViews48h]
   );
 

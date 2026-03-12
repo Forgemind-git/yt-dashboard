@@ -55,6 +55,14 @@ async function runFullCollection() {
     }
   }
 
+  // Prune old realtime_stats to prevent unbounded growth (keep 7 days)
+  try {
+    await pool.query(`DELETE FROM realtime_stats WHERE collected_at < NOW() - INTERVAL '7 days'`);
+    console.log(`[Collection ${runId}] Pruned old realtime_stats`);
+  } catch (err) {
+    console.error(`[Collection ${runId}] Failed to prune realtime_stats:`, err.message);
+  }
+
   console.log(`[Collection ${runId}] Complete`);
   return runId;
 }

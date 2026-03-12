@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const pool = require('../db/pool');
-const { parseDateRange } = require('./helpers');
+const { parseDateRange, pctChange } = require('./helpers');
 
 const router = Router();
 
@@ -35,13 +35,6 @@ router.get('/overview', async (req, res) => {
 
     const cur = current.rows[0];
     const prev = previous.rows[0];
-
-    const pctChange = (curVal, prevVal) => {
-      const c = parseFloat(curVal) || 0;
-      const p = parseFloat(prevVal) || 0;
-      if (p === 0) return c > 0 ? 100 : 0;
-      return Math.round(((c - p) / p) * 10000) / 100;
-    };
 
     res.json({
       views: { value: parseInt(cur.views), change: pctChange(cur.views, prev.views) },

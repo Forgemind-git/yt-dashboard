@@ -15,4 +15,11 @@ function parseDateRange(query) {
   };
 }
 
-module.exports = { parseDateRange };
+function pctChange(curVal, prevVal) {
+  const c = parseFloat(curVal) || 0;
+  const p = parseFloat(prevVal) || 0;
+  if (p === 0) return c > 0 ? 100 : 0;
+  return Math.round(((c - p) / p) * 10000) / 100;
+}
+
+module.exports = { parseDateRange, pctChange };

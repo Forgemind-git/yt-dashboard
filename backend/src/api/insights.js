@@ -426,6 +426,7 @@ router.get('/insights/upload-timing', async (_req, res) => {
          SUM(estimated_minutes_watched) AS total_watch_time
        FROM video_stats
        WHERE published_at IS NOT NULL
+         AND snapshot_date >= NOW() - INTERVAL '180 days'
        GROUP BY video_id
        ORDER BY total_views DESC`
     );
@@ -895,9 +896,6 @@ router.get('/insights/retention', async (req, res) => {
       const views = parseInt(v.views) || 0;
       const watchTime = parseInt(v.watch_time) || 0;
       const vsChannelAvg = channelAvgDuration > 0 ? round((avgDur / channelAvgDuration - 1) * 100) : 0;
-      // Retention efficiency: total engaged minutes
-      const engagedMinutes = watchTime;
-
       return {
         video_id: v.video_id,
         title: v.title,
@@ -906,7 +904,6 @@ router.get('/insights/retention', async (req, res) => {
         avgDurationFormatted: `${Math.floor(avgDur / 60)}m ${Math.round(avgDur % 60)}s`,
         views,
         watchTimeMinutes: watchTime,
-        engagedMinutes,
         vsChannelAvg,
       };
     });
@@ -1433,6 +1430,7 @@ router.get('/insights/lifecycle', async (req, res) => {
       FROM video_stats vs
       WHERE vs.published_at IS NOT NULL
         AND (vs.snapshot_date - vs.published_at::date) >= 0
+        AND vs.snapshot_date >= NOW() - INTERVAL '180 days'
       ORDER BY vs.video_id, vs.snapshot_date
     `);
 
@@ -1554,14 +1552,12 @@ router.get('/insights/lifecycle', async (req, res) => {
 router.get('/insights/content-patterns', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT vs.video_id, vs.title, vs.views, vs.likes,
+      SELECT DISTINCT ON (vs.video_id)
+             vs.video_id, vs.title, vs.views, vs.likes,
              vs.average_view_duration, vs.published_at
       FROM video_stats vs
-      WHERE vs.snapshot_date = (
-        SELECT MAX(snapshot_date) FROM video_stats WHERE video_id = vs.video_id
-      )
-      AND vs.views > 0
-      ORDER BY vs.views DESC
+      WHERE vs.views > 0
+      ORDER BY vs.video_id, vs.snapshot_date DESC
     `);
 
     const videos = result.rows.map(r => ({

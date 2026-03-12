@@ -1,4 +1,3 @@
-const dayjs = require('dayjs');
 const pool = require('../db/pool');
 const { getYouTubeAnalytics } = require('../auth/youtube');
 
@@ -7,27 +6,37 @@ async function collectTrafficSources(startDate, endDate) {
 
   const { data } = await analytics.reports.query({
     ids: 'channel==MINE',
-    startDate: dayjs(startDate).format('YYYY-MM-DD'),
-    endDate: dayjs(endDate).format('YYYY-MM-DD'),
+    startDate,
+    endDate,
     metrics: 'views,estimatedMinutesWatched',
     dimensions: 'day,insightTrafficSourceType',
     sort: 'day',
   });
 
-  let rowsAffected = 0;
-  for (const row of data.rows || []) {
+  const rows = data.rows || [];
+  if (rows.length === 0) return 0;
+
+  // Batch insert
+  const values = [];
+  const params = [];
+  let idx = 1;
+
+  for (const row of rows) {
     const [date, sourceType, views, minutesWatched] = row;
-    await pool.query(
-      `INSERT INTO traffic_sources (snapshot_date, source_type, views, estimated_minutes_watched)
-       VALUES ($1,$2,$3,$4)
-       ON CONFLICT (snapshot_date, source_type) DO UPDATE SET
-         views=EXCLUDED.views, estimated_minutes_watched=EXCLUDED.estimated_minutes_watched`,
-      [date, sourceType, views, minutesWatched]
-    );
-    rowsAffected++;
+    values.push(`($${idx},$${idx+1},$${idx+2},$${idx+3})`);
+    params.push(date, sourceType, views, minutesWatched);
+    idx += 4;
   }
 
-  return rowsAffected;
+  await pool.query(
+    `INSERT INTO traffic_sources (snapshot_date, source_type, views, estimated_minutes_watched)
+     VALUES ${values.join(',')}
+     ON CONFLICT (snapshot_date, source_type) DO UPDATE SET
+       views=EXCLUDED.views, estimated_minutes_watched=EXCLUDED.estimated_minutes_watched`,
+    params
+  );
+
+  return rows.length;
 }
 
 module.exports = collectTrafficSources;

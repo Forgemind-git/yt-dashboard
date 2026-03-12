@@ -22,7 +22,7 @@ router.get('/collection/logs', async (req, res) => {
 router.post('/collect/trigger', async (_req, res) => {
   try {
     // Run in background, return immediately
-    const runId = runFullCollection().catch(err => {
+    runFullCollection().catch(err => {
       console.error('Manual collection failed:', err.message);
     });
     res.json({ message: 'Collection triggered', status: 'running' });
