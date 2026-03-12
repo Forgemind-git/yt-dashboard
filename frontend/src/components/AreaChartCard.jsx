@@ -29,8 +29,17 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
+/** Cap Y-axis at 95th percentile × 1.2 so outlier spikes don't crush the chart */
+function computeYDomain(data, dataKeys) {
+  const vals = data.flatMap(d => dataKeys.map(k => Number(d[k]) || 0)).sort((a, b) => a - b);
+  if (!vals.length) return [0, 'auto'];
+  const p95 = vals[Math.floor(vals.length * 0.95)] || vals[vals.length - 1];
+  return [0, Math.ceil(p95 * 1.2)];
+}
+
 export default function AreaChartCard({ title, subtitle, data, dataKeys, colors, height = 280 }) {
   const chartColors = colors || CHART_COLORS;
+  const yDomain = data?.length ? computeYDomain(data, dataKeys) : [0, 'auto'];
 
   return (
     <div className="card p-5 animate-slide-up">
@@ -66,7 +75,7 @@ export default function AreaChartCard({ title, subtitle, data, dataKeys, colors,
             tickLine={false}
             axisLine={false}
             width={45}
-            domain={['auto', 'auto']}
+            domain={yDomain}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#333', strokeDasharray: '3 3' }} />
           {dataKeys.map((key, i) => (
