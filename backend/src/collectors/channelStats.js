@@ -1,0 +1,56 @@
+const dayjs = require('dayjs');
+const pool = require('../db/pool');
+const { getYouTubeAnalytics, getYouTubeData } = require('../auth/youtube');
+
+async function collectChannelStats(startDate, endDate) {
+  const analytics = await getYouTubeAnalytics();
+  const youtube = await getYouTubeData();
+
+  // Get daily analytics
+  const { data } = await analytics.reports.query({
+    ids: 'channel==MINE',
+    startDate: dayjs(startDate).format('YYYY-MM-DD'),
+    endDate: dayjs(endDate).format('YYYY-MM-DD'),
+    metrics: 'views,estimatedMinutesWatched,subscribersGained,subscribersLost,averageViewDuration',
+    dimensions: 'day',
+    sort: 'day',
+  });
+
+  // Get channel totals
+  const { data: channelData } = await youtube.channels.list({
+    part: 'statistics',
+    mine: true,
+  });
+
+  const channel = channelData.items?.[0]?.statistics || {};
+  const totalSubs = parseInt(channel.subscriberCount || '0', 10);
+  const totalViews = parseInt(channel.viewCount || '0', 10);
+  const totalVideos = parseInt(channel.videoCount || '0', 10);
+
+  let rowsAffected = 0;
+  const rows = data.rows || [];
+
+  for (const row of rows) {
+    const [date, views, minutesWatched, subsGained, subsLost, avgDuration] = row;
+    await pool.query(
+      `INSERT INTO channel_snapshots
+        (snapshot_date, views, estimated_minutes_watched, subscribers_gained, subscribers_lost,
+         net_subscribers, average_view_duration,
+         total_subscribers, total_views, total_videos)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       ON CONFLICT (snapshot_date) DO UPDATE SET
+         views=EXCLUDED.views, estimated_minutes_watched=EXCLUDED.estimated_minutes_watched,
+         subscribers_gained=EXCLUDED.subscribers_gained, subscribers_lost=EXCLUDED.subscribers_lost,
+         net_subscribers=EXCLUDED.net_subscribers, average_view_duration=EXCLUDED.average_view_duration,
+         total_subscribers=EXCLUDED.total_subscribers,
+         total_views=EXCLUDED.total_views, total_videos=EXCLUDED.total_videos`,
+      [date, views, minutesWatched, subsGained, subsLost, subsGained - subsLost,
+       avgDuration, totalSubs, totalViews, totalVideos]
+    );
+    rowsAffected++;
+  }
+
+  return rowsAffected;
+}
+
+module.exports = collectChannelStats;
