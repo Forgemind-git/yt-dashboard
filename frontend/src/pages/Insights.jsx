@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import {
   useGrowthInsights,
   useContentScore,
@@ -18,6 +19,22 @@ import {
 import { SkeletonCard, SkeletonChart } from '../components/Skeleton';
 import AreaChartCard from '../components/AreaChartCard';
 import BarChartCard from '../components/BarChartCard';
+
+/** Fires once when the referenced element scrolls into the viewport */
+function useLazyVisible(ref) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        obs.disconnect();
+      }
+    });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [ref]);
+  return visible;
+}
 
 /* ─── Formatting helpers ─── */
 
@@ -209,21 +226,30 @@ function EmptyState({ message = 'Not enough data yet' }) {
    ═══════════════════════════════════════════════════════════════ */
 
 export default function Insights() {
+  // Immediately load the first visible sections (max ~4 concurrent queries)
   const { data: health, isLoading: healthLoading } = useChannelHealth();
+  const { data: benchmark, isLoading: benchmarkLoading } = useGrowthBenchmark();
   const { data: recs, isLoading: recsLoading } = useRecommendations();
   const { data: summary, isLoading: summaryLoading } = useInsightsSummary();
-  const { data: growth, isLoading: growthLoading } = useGrowthInsights();
-  const { data: content, isLoading: contentLoading } = useContentScore();
-  const { data: timing, isLoading: timingLoading } = useUploadTiming();
-  const { data: retention, isLoading: retentionLoading } = useRetention();
-  const { data: trafficROI, isLoading: trafficLoading } = useTrafficROI();
-  const { data: outliers, isLoading: outliersLoading } = useOutliers();
-  const { data: lifecycle, isLoading: lifecycleLoading } = useLifecycle();
-  const { data: contentPatterns, isLoading: contentPatternsLoading } = useContentPatterns();
-  const { data: uploadGaps, isLoading: uploadGapsLoading } = useUploadGaps();
-  const { data: subQuality, isLoading: subQualityLoading } = useSubscriberQuality();
-  const { data: benchmark, isLoading: benchmarkLoading } = useGrowthBenchmark();
-  const { data: subEngagement, isLoading: subEngagementLoading } = useSubscriberEngagement();
+
+  // Lazy-load section 2: fires when the user scrolls past the initial view
+  const lazyRef1 = useRef(null);
+  const lazy1 = useLazyVisible(lazyRef1);
+  const { data: growth, isLoading: growthLoading } = useGrowthInsights({ enabled: lazy1 });
+  const { data: content, isLoading: contentLoading } = useContentScore({ enabled: lazy1 });
+  const { data: timing, isLoading: timingLoading } = useUploadTiming({ enabled: lazy1 });
+  const { data: retention, isLoading: retentionLoading } = useRetention({ enabled: lazy1 });
+  const { data: trafficROI, isLoading: trafficLoading } = useTrafficROI({ enabled: lazy1 });
+
+  // Lazy-load section 3: fires when user scrolls further down
+  const lazyRef2 = useRef(null);
+  const lazy2 = useLazyVisible(lazyRef2);
+  const { data: outliers, isLoading: outliersLoading } = useOutliers({ enabled: lazy2 });
+  const { data: lifecycle, isLoading: lifecycleLoading } = useLifecycle({ enabled: lazy2 });
+  const { data: contentPatterns, isLoading: contentPatternsLoading } = useContentPatterns({ enabled: lazy2 });
+  const { data: uploadGaps, isLoading: uploadGapsLoading } = useUploadGaps({ enabled: lazy2 });
+  const { data: subQuality, isLoading: subQualityLoading } = useSubscriberQuality({ enabled: lazy2 });
+  const { data: subEngagement, isLoading: subEngagementLoading } = useSubscriberEngagement({ enabled: lazy2 });
 
   return (
     <div className="space-y-8">
@@ -373,6 +399,9 @@ export default function Insights() {
           {renderGroupedInsights(summary.insights)}
         </div>
       ) : null}
+
+      {/* Lazy trigger: queries below here fire when user scrolls into view */}
+      <div ref={lazyRef1} />
 
       {/* ─── Section 4: Growth Momentum ─── */}
       {growthLoading ? (
@@ -1247,6 +1276,9 @@ export default function Insights() {
           )}
         </Section>
       ) : null}
+
+      {/* Lazy trigger: deeper sections fire when user scrolls this far */}
+      <div ref={lazyRef2} />
 
       {/* ─── Section 9: Outlier Analysis ─── */}
       {outliersLoading ? (

@@ -117,28 +117,28 @@ test.describe('Chart Rendering', () => {
   test('Overview — charts render at correct height, not clipped', async ({ page }) => {
     await page.goto(BASE + '/');
     await page.waitForLoadState('networkidle');
-    await page.locator('svg.recharts-surface').first().waitFor({ timeout: 8000 }).catch(() => {});
+    await page.locator('svg.recharts-surface').first().waitFor({ timeout: 10000 });
     await assertChartsValid(page);
   });
 
   test('Audience — charts render at correct height, not clipped', async ({ page }) => {
     await page.goto(BASE + '/audience');
     await page.waitForLoadState('networkidle');
-    await page.locator('svg.recharts-surface').first().waitFor({ timeout: 8000 }).catch(() => {});
+    await page.locator('svg.recharts-surface').first().waitFor({ timeout: 10000 });
     await assertChartsValid(page);
   });
 
   test('Insights — charts render at correct height, not clipped', async ({ page }) => {
     await page.goto(BASE + '/insights');
     await page.waitForLoadState('networkidle');
-    await page.locator('svg.recharts-surface').first().waitFor({ timeout: 8000 }).catch(() => {});
+    await page.locator('svg.recharts-surface').first().waitFor({ timeout: 10000 });
     await assertChartsValid(page);
   });
 
   test('Realtime — 48h history chart renders correctly', async ({ page }) => {
     await page.goto(BASE + '/realtime');
     await page.waitForLoadState('networkidle');
-    await page.locator('svg.recharts-surface').first().waitFor({ timeout: 8000 }).catch(() => {});
+    await page.locator('svg.recharts-surface').first().waitFor({ timeout: 10000 });
     await assertChartsValid(page);
   });
 
@@ -173,6 +173,7 @@ test.describe('Data Rendering', () => {
       document.querySelectorAll('.card').length >= 6
     , { timeout: 10000 });
     const cardCount = await page.locator('.card').count();
+
     expect(cardCount).toBeGreaterThanOrEqual(6);
   });
 
@@ -181,7 +182,7 @@ test.describe('Data Rendering', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for data to load (skeleton gone)
-    await page.waitForTimeout(2000);
+    await page.waitForSelector('.card', { timeout: 10000 });
 
     // Values should contain digits (not just "--" or empty)
     const hasNumericValue = await page.evaluate(() => {
@@ -198,7 +199,7 @@ test.describe('Data Rendering', () => {
   test('Videos — table rows are rendered with titles', async ({ page }) => {
     await page.goto(BASE + '/videos');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await page.waitForSelector('.card', { timeout: 10000 });
 
     // Should have table rows with video data
     const rows = await page.locator('table tbody tr, [role="row"]').count();
@@ -210,7 +211,7 @@ test.describe('Data Rendering', () => {
   test('Realtime — shows view counts (last 60 min, last 48 hours)', async ({ page }) => {
     await page.goto(BASE + '/realtime');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await page.waitForSelector('.card', { timeout: 10000 });
 
     // Page should show "60 min" or "48 hours" labels
     const has60min = await page.locator('text=/60 min/i').count();
@@ -221,7 +222,7 @@ test.describe('Data Rendering', () => {
   test('Insights — channel health score is a number 0-100', async ({ page }) => {
     await page.goto(BASE + '/insights');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('.card', { timeout: 15000 });
 
     // Look for a number in the health score area
     const scoreText = await page.evaluate(() => {
@@ -241,7 +242,7 @@ test.describe('Data Rendering', () => {
   test('Audience — traffic source bars are present', async ({ page }) => {
     await page.goto(BASE + '/audience');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await page.waitForSelector('.card', { timeout: 10000 });
 
     // Either recharts bars or card content should be present
     const svgCount = await page.locator('svg.recharts-surface').count();
@@ -252,7 +253,7 @@ test.describe('Data Rendering', () => {
   test('System Health — collection log entries exist', async ({ page }) => {
     await page.goto(BASE + '/health');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await page.waitForSelector('.card', { timeout: 10000 });
 
     // Should show log entries with status indicators
     const hasRows = await page.evaluate(() => {

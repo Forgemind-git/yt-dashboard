@@ -4,17 +4,28 @@ services:
     container_name: yt-backend
     restart: unless-stopped
     env_file: .env
-    environment:
     networks:
       - root_default
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=root_default"
       - "traefik.http.routers.yt-backend.rule=Host(`yt.srv879786.hstgr.cloud`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.yt-backend.entrypoints=web,websecure"
+      - "traefik.http.routers.yt-backend.entrypoints=websecure"
       - "traefik.http.routers.yt-backend.tls=true"
       - "traefik.http.routers.yt-backend.tls.certresolver=mytlschallenge"
       - "traefik.http.routers.yt-backend.priority=10"
       - "traefik.http.services.yt-backend.loadbalancer.server.port=3001"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   yt-frontend:
     build:
@@ -27,12 +38,23 @@ services:
       - root_default
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=root_default"
       - "traefik.http.routers.yt-frontend.rule=Host(`yt.srv879786.hstgr.cloud`)"
-      - "traefik.http.routers.yt-frontend.entrypoints=web,websecure"
+      - "traefik.http.routers.yt-frontend.entrypoints=websecure"
       - "traefik.http.routers.yt-frontend.tls=true"
       - "traefik.http.routers.yt-frontend.tls.certresolver=mytlschallenge"
       - "traefik.http.routers.yt-frontend.priority=1"
       - "traefik.http.services.yt-frontend.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   root_default:

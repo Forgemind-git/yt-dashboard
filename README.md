@@ -39,11 +39,14 @@ docker compose up -d --build
 
 ### 4. Authenticate YouTube Account
 
-1. Visit: `https://yt.srv879786.hstgr.cloud/api/auth/init`
-2. Click the consent URL, authorize with your YouTube account
-3. Copy the `refresh_token` from the callback response
-4. Add it to `.env` as `YOUTUBE_REFRESH_TOKEN=<token>`
-5. Restart: `docker compose restart yt-backend`
+Authentication is fully automated:
+
+1. Visit `https://yt.srv879786.hstgr.cloud/api/auth/init` in your browser
+2. Authorize with your YouTube/Google account
+3. You will be redirected back to the dashboard automatically
+4. The refresh token is saved to the database — no manual copying needed
+
+To check auth status: `curl https://yt.srv879786.hstgr.cloud/api/auth/status`
 
 ### 5. Trigger First Collection
 
@@ -79,6 +82,26 @@ curl -X POST https://yt.srv879786.hstgr.cloud/api/collect/trigger
 | `GET /api/realtime` | Latest realtime snapshot |
 | `GET /api/collection/logs` | Collection run history |
 | `POST /api/collect/trigger` | Manual collection trigger |
+
+### Insights Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/insights/growth` | Subscriber/view velocity, milestone projections, acceleration |
+| `GET /api/insights/content-score` | Per-video weighted scores (S/A/B/C/D grades) |
+| `GET /api/insights/upload-timing` | Best day/hour to publish based on view history |
+| `GET /api/insights/outliers` | Z-score breakout and underperforming videos |
+| `GET /api/insights/summary` | Auto-generated text insights |
+| `GET /api/insights/retention` | Watch time per view, estimated retention curves |
+| `GET /api/insights/traffic-roi` | Value per traffic source (views/effort) |
+| `GET /api/insights/channel-health` | Composite score 0-100 across 6 dimensions |
+| `GET /api/insights/recommendations` | Prioritized action list with effort/impact |
+| `GET /api/insights/lifecycle` | Video lifecycle stage classification |
+| `GET /api/insights/content-patterns` | Title keywords, format comparison, title length |
+| `GET /api/insights/upload-gaps` | Gap detection, cost-per-gap-day in views/subs |
+| `GET /api/insights/subscriber-quality` | Churn rate, quality score, weekly cohort |
+| `GET /api/insights/growth-benchmark` | 30/60/90-day window comparisons |
+| `GET /api/insights/subscriber-engagement` | Subscriber vs non-subscriber traffic, Pearson correlation |
 
 All endpoints accept `?from=YYYY-MM-DD&to=YYYY-MM-DD` (default: last 28 days).
 

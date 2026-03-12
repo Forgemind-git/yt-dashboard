@@ -2017,3 +2017,4 @@ router.get('/insights/subscriber-engagement', async (req, res) => {
 });
 
 module.exports = router;
+module.exports._helpers = { ewma, linearSlope, stddev, diversityIndex, pctChange, safeDivide, round, clamp };
